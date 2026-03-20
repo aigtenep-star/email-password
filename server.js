@@ -21,22 +21,8 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-
-// 🔒 SECURE EMAIL API (UPDATED)
+// Email API
 app.get("/email", (req, res) => {
-
-  // 🔒 SECRET KEY CHECK
-  const secret = req.headers["x-secret-key"];
-  if(secret !== "MY_SECRET_123"){
-    return res.status(403).json({ message: "Access Denied" });
-  }
-
-  // 🔒 DOMAIN CHECK (IMPORTANT → CHANGE THIS)
-  const referer = req.headers.referer || "";
-  if(!referer.includes("gten-educational-platform.github.io")){
-    return res.status(403).json({ message: "Blocked outside website" });
-  }
-
   const category = req.query.category;
   if (!category) return res.status(400).json({ message: "Category missing" });
 
@@ -44,8 +30,9 @@ app.get("/email", (req, res) => {
   const userKey = req.ip + "|" + req.headers["user-agent"];
   const now = Date.now();
 
-  const lockTime = 5 * 60 * 1000; // 5 minutes
+  const lockTime = 5 * 60 * 1000; // 5 minutes in ms
 
+  // Check if student requested email within last 5 minutes
   if (issuedUsers.has(userKey)) {
     const lastTime = issuedUsers.get(userKey);
     if (now - lastTime < lockTime) {
@@ -67,14 +54,10 @@ app.get("/email", (req, res) => {
     return res.status(500).json({ message: "Invalid JSON format" });
   }
 
-  if (!data[category]) {
-    return res.status(404).json({ message: "Invalid category" });
-  }
+  if (!data[category]) return res.status(404).json({ message: "Invalid category" });
 
   const nextEmail = data[category].find(e => !e.used);
-  if (!nextEmail) {
-    return res.json({ message: "No emails left for this category" });
-  }
+  if (!nextEmail) return res.json({ message: "No emails left for this category" });
 
   // Mark email as used
   nextEmail.used = true;
@@ -85,7 +68,6 @@ app.get("/email", (req, res) => {
 
   res.json({ email: nextEmail.email });
 });
-
 
 // Start server
 const PORT = process.env.PORT || 3000;
