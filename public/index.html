@@ -171,11 +171,7 @@ function showClass(cls){
 function getEmail(category){
   if(alreadyUsed) return;
 
- fetch(`https://email-password-wb7c.onrender.com/email?category=${category}`, {
-  headers: {
-    "x-secret-key": "MY_SECRET_123"
-  }
-})
+  fetch(`https://email-password-wb7c.onrender.com/email?category=${category}`)
     .then(r=>r.json())
     .then(d=>{
       document.getElementById("email").innerText = d.email || d.message;
