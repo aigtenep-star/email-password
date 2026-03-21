@@ -15,7 +15,7 @@ const validTokens = new Map();   // for unique links
 const EMAIL_FILE = path.join(__dirname, "emails.json");
 
 // Serve frontend
-app.use(express.static("public"));
+app.use("/static", express.static("public"));
 
 /* ==============================
    🔐 GENERATE UNIQUE LINK
