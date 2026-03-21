@@ -7,32 +7,67 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// In-memory map: studentKey -> timestamp of last email
-const issuedUsers = new Map();
+// Store users + tokens
+const issuedUsers = new Map();   // for email lock
+const validTokens = new Map();   // for unique links
 
-// Absolute path to emails.json
+// File path
 const EMAIL_FILE = path.join(__dirname, "emails.json");
 
 // Serve frontend
 app.use(express.static("public"));
 
-// Root route
+/* ==============================
+   🔐 GENERATE UNIQUE LINK
+============================== */
+app.get("/generate-link", (req, res) => {
+  const token = Math.random().toString(36).substring(2, 10);
+
+  validTokens.set(token, Date.now());
+
+  res.json({
+    link: `https://email-password-wb7c.onrender.com/?token=${token}`
+  });
+});
+
+/* ==============================
+   🔐 PROTECTED HOME PAGE
+============================== */
 app.get("/", (req, res) => {
+
+  const token = req.query.token;
+
+  // ❌ No token
+  if (!token || !validTokens.has(token)) {
+    return res.send("❌ Invalid or missing access link");
+  }
+
+  // ⏱ Expire after 5 minutes
+  const createdTime = validTokens.get(token);
+  if (Date.now() - createdTime > 5 * 60 * 1000) {
+    validTokens.delete(token);
+    return res.send("❌ Link expired");
+  }
+
+  // 🔥 One-time use
+  validTokens.delete(token);
+
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Email API
+/* ==============================
+   📧 EMAIL API (UNCHANGED LOGIC)
+============================== */
 app.get("/email", (req, res) => {
+
   const category = req.query.category;
   if (!category) return res.status(400).json({ message: "Category missing" });
 
-  // Unique student key: IP + User-Agent
   const userKey = req.ip + "|" + req.headers["user-agent"];
   const now = Date.now();
 
-  const lockTime = 5 * 60 * 1000; // 5 minutes in ms
+  const lockTime = 5 * 60 * 1000;
 
-  // Check if student requested email within last 5 minutes
   if (issuedUsers.has(userKey)) {
     const lastTime = issuedUsers.get(userKey);
     if (now - lastTime < lockTime) {
@@ -42,7 +77,6 @@ app.get("/email", (req, res) => {
     }
   }
 
-  // Read email data
   if (!fs.existsSync(EMAIL_FILE)) {
     return res.status(500).json({ message: "emails.json not found" });
   }
@@ -54,21 +88,25 @@ app.get("/email", (req, res) => {
     return res.status(500).json({ message: "Invalid JSON format" });
   }
 
-  if (!data[category]) return res.status(404).json({ message: "Invalid category" });
+  if (!data[category]) {
+    return res.status(404).json({ message: "Invalid category" });
+  }
 
   const nextEmail = data[category].find(e => !e.used);
-  if (!nextEmail) return res.json({ message: "No emails left for this category" });
+  if (!nextEmail) {
+    return res.json({ message: "No emails left for this category" });
+  }
 
-  // Mark email as used
   nextEmail.used = true;
   fs.writeFileSync(EMAIL_FILE, JSON.stringify(data, null, 2));
 
-  // Update timestamp
   issuedUsers.set(userKey, now);
 
   res.json({ email: nextEmail.email });
 });
 
-// Start server
+/* ==============================
+   🚀 START SERVER
+============================== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on port", PORT));
