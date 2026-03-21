@@ -15,6 +15,7 @@ const validTokens = new Map();   // for unique links
 const EMAIL_FILE = path.join(__dirname, "emails.json");
 
 // Serve frontend
+// Serve frontend
 app.use("/static", express.static("public"));
 
 /* ==============================
@@ -28,6 +29,17 @@ app.get("/generate-link", (req, res) => {
   res.json({
     link: `https://email-password-wb7c.onrender.com/?token=${token}`
   });
+});
+
+/* ==============================
+   💰 AFTER PAYMENT REDIRECT  ← ADD HERE
+============================== */
+app.get("/after-payment", (req, res) => {
+  const token = Math.random().toString(36).substring(2, 10);
+
+  validTokens.set(token, Date.now());
+
+  res.redirect(`/?token=${token}`);
 });
 
 /* ==============================
