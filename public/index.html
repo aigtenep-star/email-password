@@ -73,6 +73,9 @@ h2{
   font-weight:bold;
   margin-top:10px;
 }
+  #message{
+  white-space: pre-line;
+}
 </style>
 </head>
 
@@ -175,8 +178,11 @@ function getEmail(category){
     .then(r=>r.json())
     .then(d=>{
       document.getElementById("email").innerText = d.email || d.message;
-      document.getElementById("message").innerText =
-        "You have permission for only one registered email.";
+     document.getElementById("message").innerText =
+  "⚠️ You have permission for only one registered email.\n\n" +
+  "📌 Copy or note the password (email) immediately.\n" +
+  "⏳ After 2 minutes, self-destruction mode will activate and the password will disappear.\n" +
+  "📅 This password remains valid for 366 days (1 year).";
 
       // 🔒 Disable ALL buttons
       document.querySelectorAll(".sub-btn").forEach(b=>b.disabled=true);
